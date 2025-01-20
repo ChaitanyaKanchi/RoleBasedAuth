@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="text-center">
+        <h1 class="display-4 mb-4">Welcome to Our Platform</h1>
+        <p class="lead mb-5">Please register or login to continue</p>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <a href="{% url 'register' %}" class="btn btn-primary btn-lg btn-block mb-3 w-100">
+                    Register
+                </a>
+            </div>
+            <div class="col-md-4">
+                <a href="{% url 'login' %}" class="btn btn-success btn-lg btn-block w-100">
+                    Login
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
