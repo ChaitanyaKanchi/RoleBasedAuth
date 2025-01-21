@@ -129,3 +129,15 @@ AUTH_USER_MODEL = 'accounts.User'
 LOGIN_URL = 'login'
 LOGIN_REDIRECT_URL = 'client_dashboard'
 LOGOUT_REDIRECT_URL = 'login' 
+
+
+# Email Configuration
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Or your email host
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'chaitanyakanchi978@gmail.com'
+EMAIL_HOST_PASSWORD = 'vtualbaslxnchrbd'
+
+# Email settings
+DEFAULT_FROM_EMAIL = 'chaithanyakanchi978@gmail.com'

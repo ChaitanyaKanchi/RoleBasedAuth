@@ -21,4 +21,4 @@ class LoginForm(forms.Form):
 class CustomUserCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('username', 'password1', 'password2')  # Only basic fields for clients 
+        fields = ('username', 'password1', 'password2')
