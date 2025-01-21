@@ -19,6 +19,8 @@ class LoginForm(forms.Form):
     password = forms.CharField(widget=forms.PasswordInput)
 
 class CustomUserCreationForm(UserCreationForm):
+    email = forms.EmailField(required=True)
+    
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('username', 'password1', 'password2')
+        fields = ('username', 'email', 'password1', 'password2')
