@@ -4,6 +4,28 @@
 <div class="container mt-5">
     <h2>Employee Dashboard</h2>
     <p>Welcome, {{ user.username }}!</p>
+    <div class="header">
+        <form method="post" action="{% url 'logout' %}" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Logout</button>
+        </form>
+    </div>
     <!-- Add employee-specific content here -->
 </div>
+
+<style>
+    .btn-danger {
+        background-color: #dc3545;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-danger:hover {
+        background-color: #c82333;
+    }
+</style>
 {% endblock %} 

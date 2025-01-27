@@ -39,7 +39,9 @@ class User(AbstractUser):
     ROLES = (
         ('client', 'Client'),
         ('employee', 'Employee'),
+        ('admin', 'Admin'),  # Add admin role
     )
+    email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=ROLES, default='client')
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     address = models.TextField(blank=True, null=True)
@@ -47,8 +49,11 @@ class User(AbstractUser):
     def __str__(self):
         return f"{self.username} - {self.role}"
 
-    # Add any additional fields you want here
-    pass
+    def save(self, *args, **kwargs):
+        # If user is a superuser, set role to admin
+        if self.is_superuser:
+            self.role = 'admin'
+        super().save(*args, **kwargs)
 
 # Register the signal
 def ready(self):

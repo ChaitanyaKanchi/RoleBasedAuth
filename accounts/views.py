@@ -13,7 +13,7 @@ from .models import CustomUser
 from .decorators import client_required, employee_required
 import random
 from django.contrib.auth import get_user_model
-from accounts.models import User  # Import User from accounts models
+from accounts.models import User
 from projectname.settings import EMAIL_BACKEND
 import jwt
 from datetime import datetime
