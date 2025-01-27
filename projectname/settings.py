@@ -131,13 +131,21 @@ LOGIN_REDIRECT_URL = 'client_dashboard'
 LOGOUT_REDIRECT_URL = 'login' 
 
 
+
 # Email Configuration
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'  # Or your email host
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'chaitanyakanchi978@gmail.com'
 EMAIL_HOST_PASSWORD = 'vtualbaslxnchrbd'
+DEFAULT_FROM_EMAIL = 'chaitanyakanchi978@gmail.com'
 
-# Email settings
-DEFAULT_FROM_EMAIL = 'chaithanyakanchi978@gmail.com'
+# For debugging
+EMAIL_USE_SSL = False
+EMAIL_TIMEOUT = 60 
+
+
+# JWT Settings
+JWT_SECRET_KEY = SECRET_KEY
+JWT_ALGORITHM = 'HS256' 

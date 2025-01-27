@@ -18,4 +18,9 @@ class CustomUserAdmin(UserAdmin):
         ),
     )
 
+    def save_model(self, request, obj, form, change):
+        if not change:  # Only for new users
+            obj.set_unusable_password()  # Set an unusable password initially
+        super().save_model(request, obj, form, change)
+
 admin.site.register(User, CustomUserAdmin) 

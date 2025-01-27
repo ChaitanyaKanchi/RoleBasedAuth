@@ -3,7 +3,7 @@ from django.contrib.auth import login, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib import messages
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMessage
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
@@ -15,6 +15,9 @@ import random
 from django.contrib.auth import get_user_model
 from accounts.models import User  # Import User from accounts models
 from projectname.settings import EMAIL_BACKEND
+import jwt
+from datetime import datetime
+from django.conf import settings
 
 def register(request):
     if request.method == 'POST':
@@ -63,15 +66,24 @@ def client_dashboard(request):
 
 @login_required
 def employee_dashboard(request):
+    print(f"Accessing employee dashboard. User role: {request.user.role}")
     if request.user.role != 'employee':
         messages.error(request, 'Access Denied. Employees only.')
         return redirect('login')
-    return render(request, 'accounts/employee_dashboard.html')
+    context = {
+        'username': request.user.username,
+        'role': request.user.role
+    }
+    return render(request, 'accounts/employee_dashboard.html', context)
+
 
 def home(request):
     return render(request, 'accounts/home.html')
 
+
 def forgot_password(request):
+    token = request.GET.get('token')
+    
     if request.method == 'POST':
         email = request.POST.get('email').strip()
         
@@ -89,20 +101,17 @@ def forgot_password(request):
                 request.session['reset_email'] = user.email
                 
                 try:
-                    backend = EmailBackend()
-                    send_mail(
-                        subject='Password Reset OTP',
-                        message=f'Your OTP for password reset is: {otp}',
-                        from_email='chaithanyakanchi978@gmail.com',
-                        recipient_list=[user.email],
-                        fail_silently=False,
-                        connection=backend
+                    email = EmailMessage(
+                        'Password Reset OTP',
+                        f'Your OTP for password reset is: {otp}',
+                        settings.EMAIL_HOST_USER,
+                        [user.email]
                     )
-                    print(f"OTP {otp} has been generated for {email}")
-                    messages.success(request, 'OTP has been sent. Please check your console/terminal.')
+                    email.send(fail_silently=False)
+                    print(f"OTP {otp} has been sent to {email}")
+                    messages.success(request, 'OTP has been sent to your email.')
                 except Exception as email_error:
                     print(f"Email error: {str(email_error)}")
-                    # Store OTP in messages for testing purposes
                     messages.warning(request, f'Email sending failed, but for testing, your OTP is: {otp}')
                 
                 return redirect('verify_otp')
@@ -112,6 +121,17 @@ def forgot_password(request):
         except Exception as e:
             print(f"Error occurred: {str(e)}")
             messages.error(request, f'An error occurred: {str(e)}')
+    
+    # Handle JWT token if present
+    if token:
+        try:
+            # Decode token
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+            user = User.objects.get(id=payload['user_id'])
+            request.session['reset_email'] = user.email
+            return redirect('reset_password')
+        except (jwt.ExpiredSignatureError, jwt.DecodeError, User.DoesNotExist):
+            messages.error(request, 'Invalid or expired reset link.')
     
     return render(request, 'accounts/forgot_password.html')
 
@@ -131,25 +151,33 @@ def reset_password(request):
         password2 = request.POST.get('password2')
         email = request.session.get('reset_email')
         
+        print(f"Debug - Email from session: {email}")  # Debug print
+        
         if password1 != password2:
             messages.error(request, 'Passwords do not match')
             return render(request, 'accounts/reset_password.html')
             
-        if email:
-            try:
-                # Use filter().first() instead of get() to avoid MultipleObjectsReturned error
-                user = User.objects.filter(email=email).first()
-                if user:
-                    user.set_password(password1)
-                    user.save()
-                    # Clear session
-                    del request.session['reset_otp']
-                    del request.session['reset_email']
-                    messages.success(request, 'Password has been reset successfully')
-                    return redirect('login')
-                else:
-                    messages.error(request, 'User not found')
-            except Exception as e:
-                print(f"Error resetting password: {str(e)}")
-                messages.error(request, 'An error occurred while resetting password')
+        if not email:
+            messages.error(request, 'Reset email not found in session')
+            return render(request, 'accounts/reset_password.html')
+            
+        try:
+            user = User.objects.filter(email=email).first()
+            if user:
+                user.set_password(password1)
+                user.save()
+                
+                # Clear session
+                request.session.pop('reset_otp', None)
+                request.session.pop('reset_email', None)
+                
+                messages.success(request, 'Password has been reset successfully')
+                return redirect('login')
+            else:
+                messages.error(request, 'User not found')
+                print(f"User not found for email: {email}")  # Debug print
+        except Exception as e:
+            print(f"Password reset error: {str(e)}")  # Debug print
+            messages.error(request, 'An error occurred while resetting password')
+    
     return render(request, 'accounts/reset_password.html') 
