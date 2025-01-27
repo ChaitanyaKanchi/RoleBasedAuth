@@ -5,6 +5,7 @@ from django.conf import settings
 import jwt
 from datetime import datetime, timedelta
 from .models import User
+from django.template.loader import render_to_string
 
 @receiver(post_save, sender=User)
 def send_employee_welcome_email(sender, instance, created, **kwargs):
@@ -25,13 +26,20 @@ def send_employee_welcome_email(sender, instance, created, **kwargs):
             
             reset_link = f"http://127.0.0.1:8000/forgot-password/?token={token}"
             
+            # Render HTML email template
+            html_message = render_to_string('accounts/email/employee_welcome.html', {
+                'username': instance.username,
+                'reset_link': reset_link,
+            })
+            
             # Send email
             email = EmailMessage(
-                subject='Set Your Password',
-                body=f'Hello {instance.username},\n\nClick this link to set your password:\n{reset_link}\n\nThis link will expire in 24 hours.',
+                subject='Welcome to the Team - Set Your Password',
+                body=html_message,
                 from_email=settings.EMAIL_HOST_USER,
                 to=[instance.email],
             )
+            email.content_subtype = "html"  # Set content type to HTML
             email.send(fail_silently=False)
             print(f"Email sent successfully to {instance.email}!")
             

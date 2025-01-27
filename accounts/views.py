@@ -101,13 +101,21 @@ def forgot_password(request):
                 request.session['reset_email'] = user.email
                 
                 try:
+                    # Render HTML email template
+                    html_message = render_to_string('accounts/email/reset_password_otp.html', {
+                        'otp': otp
+                    })
+                    
+                    # Send email
                     email = EmailMessage(
                         'Password Reset OTP',
-                        f'Your OTP for password reset is: {otp}',
+                        html_message,
                         settings.EMAIL_HOST_USER,
                         [user.email]
                     )
+                    email.content_subtype = "html"  # Set content type to HTML
                     email.send(fail_silently=False)
+                    
                     print(f"OTP {otp} has been sent to {email}")
                     messages.success(request, 'OTP has been sent to your email.')
                 except Exception as email_error:
