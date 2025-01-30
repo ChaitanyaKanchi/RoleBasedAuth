@@ -61,10 +61,10 @@ def ready(self):
 
 @receiver(post_save, sender=User)
 def send_employee_welcome_email(sender, instance, created, **kwargs):
-    print(f"\n=== Debug: Signal Triggered ===")
-    print(f"Created: {created}")
-    print(f"Role: {instance.role}")
-    print(f"Email: {instance.email}")
+    # print(f"\n=== Debug: Signal Triggered ===")
+    # print(f"Created: {created}")
+    # print(f"Role: {instance.role}")
+    # print(f"Email: {instance.email}")
     
     if created and instance.role == 'employee':
         try:
@@ -75,7 +75,7 @@ def send_employee_welcome_email(sender, instance, created, **kwargs):
                 'exp': datetime.utcnow() + timedelta(hours=24)
             }, settings.SECRET_KEY, algorithm='HS256')
             
-            reset_link = f"http://127.0.0.1:8000/forgot-password/?token={token}"
+            reset_link = f"http://127.0.0.1:8000//?token={token}"
             
             # Render HTML email template
             html_message = render_to_string('accounts/email/employee_welcome.html', {

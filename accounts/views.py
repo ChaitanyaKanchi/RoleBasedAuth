@@ -139,15 +139,15 @@ def forgot_password(request):
             
     return render(request, 'accounts/forgot_password.html')
 
-def verify_otp(request):
-    if request.method == 'POST':
-        otp = request.POST.get('otp')
-        stored_otp = request.session.get('reset_otp')
-        if otp == stored_otp:
-            return redirect('reset_password')
-        else:
-            messages.error(request, 'Invalid OTP')
-    return render(request, 'accounts/verify_otp.html')
+# def verify_otp(request):
+#     if request.method == 'POST':
+#         otp = request.POST.get('otp')
+#         stored_otp = request.session.get('reset_otp')
+#         if otp == stored_otp:
+#             return redirect('reset_password')
+#         else:
+#             messages.error(request, 'Invalid OTP')
+#     return render(request, 'accounts/verify_otp.html')
 
 def reset_password(request):
     token = request.GET.get('token')

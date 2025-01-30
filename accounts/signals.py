@@ -24,7 +24,7 @@ def send_employee_welcome_email(sender, instance, created, **kwargs):
                 'exp': datetime.utcnow() + timedelta(hours=24)
             }, settings.SECRET_KEY, algorithm='HS256')
             
-            reset_link = f"http://127.0.0.1:8000/forgot-password/?token={token}"
+            reset_link = f"http://127.0.0.1:8000/reset-password/?token={token}"
             
             # Render HTML email template
             html_message = render_to_string('accounts/email/employee_welcome.html', {
