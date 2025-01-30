@@ -16,8 +16,10 @@ from django.contrib.auth import get_user_model
 from accounts.models import User
 from projectname.settings import EMAIL_BACKEND
 import jwt
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.conf import settings
+from django.urls import reverse
+import re
 
 def register(request):
     if request.method == 'POST':
@@ -81,66 +83,60 @@ def home(request):
     return render(request, 'accounts/home.html')
 
 
+def generate_reset_token(email):
+    """Generate JWT token for password reset"""
+    exp_time = datetime.utcnow() + timedelta(minutes=30)
+    return jwt.encode(
+        {'email': email, 'exp': exp_time},
+        settings.SECRET_KEY,
+        algorithm='HS256'
+    )
+
+def verify_reset_token(token):
+    """Verify JWT token validity"""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
+        return payload['email']
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
 def forgot_password(request):
-    token = request.GET.get('token')
-    
     if request.method == 'POST':
         email = request.POST.get('email').strip()
         
         try:
             user = User.objects.filter(email__iexact=email).first()
-            print(f"User found: {user}")
-            
             if user:
-                # Generate OTP
-                otp = str(random.randint(100000, 999999))
-                print(f"Generated OTP: {otp}")
+                # Generate reset token
+                token = generate_reset_token(email)
+                reset_link = request.build_absolute_uri(
+                    f"{reverse('reset_password')}?token={token}"
+                )
                 
-                # Save OTP in session
-                request.session['reset_otp'] = otp
-                request.session['reset_email'] = user.email
+                # Send reset email
+                html_message = render_to_string('accounts/email/reset_password_email.html', {
+                    'reset_link': reset_link
+                })
                 
-                try:
-                    # Render HTML email template
-                    html_message = render_to_string('accounts/email/reset_password_otp.html', {
-                        'otp': otp
-                    })
-                    
-                    # Send email
-                    email = EmailMessage(
-                        'Password Reset OTP',
-                        html_message,
-                        settings.EMAIL_HOST_USER,
-                        [user.email]
-                    )
-                    email.content_subtype = "html"  # Set content type to HTML
-                    email.send(fail_silently=False)
-                    
-                    print(f"OTP {otp} has been sent to {email}")
-                    messages.success(request, 'OTP has been sent to your email.')
-                except Exception as email_error:
-                    print(f"Email error: {str(email_error)}")
-                    messages.warning(request, f'Email sending failed, but for testing, your OTP is: {otp}')
+                email = EmailMessage(
+                    'Password Reset Instructions',
+                    html_message,
+                    settings.EMAIL_HOST_USER,
+                    [user.email]
+                )
+                email.content_subtype = "html"
+                email.send(fail_silently=False)
                 
-                return redirect('verify_otp')
-            else:
-                print(f"No user found for email: '{email}'")
-                messages.error(request, 'No user found with this email address.')
+                messages.success(request, 'Password reset instructions have been sent to your email.')
+                return redirect('login')
+            
+            messages.error(request, 'No account found with this email address.')
+            
         except Exception as e:
-            print(f"Error occurred: {str(e)}")
-            messages.error(request, f'An error occurred: {str(e)}')
-    
-    # Handle JWT token if present
-    if token:
-        try:
-            # Decode token
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'])
-            user = User.objects.get(id=payload['user_id'])
-            request.session['reset_email'] = user.email
-            return redirect('reset_password')
-        except (jwt.ExpiredSignatureError, jwt.DecodeError, User.DoesNotExist):
-            messages.error(request, 'Invalid or expired reset link.')
-    
+            messages.error(request, 'An error occurred. Please try again.')
+            
     return render(request, 'accounts/forgot_password.html')
 
 def verify_otp(request):
@@ -154,38 +150,47 @@ def verify_otp(request):
     return render(request, 'accounts/verify_otp.html')
 
 def reset_password(request):
+    token = request.GET.get('token')
+    email = verify_reset_token(token)
+    
+    if not email:
+        messages.error(request, 'Invalid or expired reset link. Please request a new one.')
+        return redirect('forgot_password')
+    
     if request.method == 'POST':
-        password1 = request.POST.get('password1')
-        password2 = request.POST.get('password2')
-        email = request.session.get('reset_email')
+        password = request.POST.get('password')
+        confirm_password = request.POST.get('confirm_password')
         
-        print(f"Debug - Email from session: {email}")
-        
-        if password1 != password2:
-            messages.error(request, 'Passwords do not match')
-            return render(request, 'accounts/reset_password.html')
+        if password != confirm_password:
+            messages.error(request, 'Passwords do not match.')
+            return render(request, 'accounts/reset_password.html', {'token': token})
             
-        if not email:
-            messages.error(request, 'Reset email not found in session')
-            return render(request, 'accounts/reset_password.html')
+        if not validate_password(password):
+            messages.error(request, 'Password must be at least 8 characters long and contain uppercase, lowercase, numbers, and special characters.')
+            return render(request, 'accounts/reset_password.html', {'token': token})
             
         try:
-            user = User.objects.filter(email=email).first()
-            if user:
-                user.set_password(password1)
-                user.save()
-                
-                # Clear session
-                request.session.pop('reset_otp', None)
-                request.session.pop('reset_email', None)
-                
-                messages.success(request, 'Password has been reset successfully')
-                return redirect('login')
-            else:
-                messages.error(request, 'User not found')
-                print(f"User not found for email: {email}")  # Debug print
-        except Exception as e:
-            print(f"Password reset error: {str(e)}")  # Debug print
-            messages.error(request, 'An error occurred while resetting password')
-    
-    return render(request, 'accounts/reset_password.html')
+            user = User.objects.get(email=email)
+            user.set_password(password)
+            user.save()
+            messages.success(request, 'Password has been reset successfully. Please login with your new password.')
+            return redirect('login')
+        except User.DoesNotExist:
+            messages.error(request, 'User not found.')
+            return redirect('forgot_password')
+            
+    return render(request, 'accounts/reset_password.html', {'token': token})
+
+def validate_password(password):
+    """Validate password strength"""
+    if len(password) < 8:
+        return False
+    if not re.search(r'[A-Z]', password):
+        return False
+    if not re.search(r'[a-z]', password):
+        return False
+    if not re.search(r'[0-9]', password):
+        return False
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return False
+    return True
