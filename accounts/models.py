@@ -39,7 +39,7 @@ class User(AbstractUser):
     ROLES = (
         ('client', 'Client'),
         ('employee', 'Employee'),
-        ('admin', 'Admin'),  # Add admin role
+        ('admin', 'Admin'),
     )
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=ROLES, default='client')
@@ -50,7 +50,6 @@ class User(AbstractUser):
         return f"{self.username} - {self.role}"
 
     def save(self, *args, **kwargs):
-        # If user is a superuser, set role to admin
         if self.is_superuser:
             self.role = 'admin'
         super().save(*args, **kwargs)

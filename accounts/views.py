@@ -159,7 +159,7 @@ def reset_password(request):
         password2 = request.POST.get('password2')
         email = request.session.get('reset_email')
         
-        print(f"Debug - Email from session: {email}")  # Debug print
+        print(f"Debug - Email from session: {email}")
         
         if password1 != password2:
             messages.error(request, 'Passwords do not match')
@@ -188,4 +188,4 @@ def reset_password(request):
             print(f"Password reset error: {str(e)}")  # Debug print
             messages.error(request, 'An error occurred while resetting password')
     
-    return render(request, 'accounts/reset_password.html') 
+    return render(request, 'accounts/reset_password.html')
